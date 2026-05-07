@@ -1,17 +1,23 @@
 ---
 name: dcf-model
-description: Real DCF (Discounted Cash Flow) model creation for equity valuation. Retrieves financial data from SEC filings and analyst reports, builds comprehensive cash flow projections with proper WACC calculations, performs sensitivity analysis, and outputs professional Excel models with executive summaries. Use when users need to value a company using DCF methodology, request intrinsic value analysis, or ask for detailed financial modeling with growth projections and terminal value calculations.
+description: DCF（现金流折现）模型构建，专为A股公司估值设计。使用mx-data/tushare获取行情与财务数据，构建完整的现金流预测、WACC计算、敏感性分析，输出机构级Excel模型。适用于公司估值、内在价值分析、投资决策、增长预测与终值计算。
 ---
 
 # DCF Model Builder
 
 ## Overview
 
-This skill creates institutional-quality DCF models for equity valuation following investment banking standards. Each analysis produces a detailed Excel model (with sensitivity analysis included at the bottom of the DCF sheet).
+本 skill 创建面向A股公司的DCF现金流折现模型，遵循投资银行标准。每次分析输出详细Excel模型（DCF表底部包含敏感性分析）。
 
-## Tools
+## 数据源规范
 
-- Default to using all of the information provided by the user and MCP servers available for data sourcing.
+**遵循 `references/data-source-config.md` 中的A股数据源优先级：**
+
+1. **mx-data**（一级）— 当前股价、Beta、EPS、ROE、总股本
+2. **tushare**（补充）— 历史财务数据、分红明细、国债收益率
+3. **mx-search**（研究）— 分红政策公告、管理层指引、行业研报
+
+**不使用国际第三方 MCP**（Daloopa/FactSet/S&P Global等），这些面向美股/国际市场。
 
 ## Critical Constraints - Read These First
 
@@ -90,21 +96,38 @@ This applies to every merged section header in the DCF (market data, scenario bl
 
 ## DCF Process Workflow
 
-### Step 1: Data Retrieval and Validation
+### Step 1: 数据获取与验证
 
-Fetch data from MCP servers, user provided data, and the web.
+使用mx-data/tushare/mx-search获取A股数据。
 
-**Data Sources Priority:**
-1. **MCP Servers** (if configured) - Structured financial data from providers like Daloopa
-2. **User-Provided Data** - Historical financials from their research
-3. **Web Search/Fetch** - Current prices, beta, debt and cash when needed
+**数据源优先级（A股）：**
+1. **mx-data** — 行情数据（股价、Beta、股本）、财务指标（EPS、ROE）
+2. **tushare** — 历史财务报表、分红数据、国债收益率
+3. **mx-search** — 分红政策公告、行业研报、管理层指引
 
-**Validation Checklist:**
-- Verify net debt vs net cash (critical for valuation)
-- Confirm diluted shares outstanding (check for recent buybacks/issuances)
-- Validate historical margins are consistent with business model
-- Cross-check revenue growth rates with industry benchmarks
-- Verify tax rate is reasonable (typically 21-28%)
+**数据获取脚本模板：**
+```bash
+# 行情 + Beta（mx-data）
+cd ~/.claude/skills/mx-data && python mx_data.py "[公司名]" 最新价 总股本 beta 股息率
+
+# 财务数据（mx-data）
+cd ~/.claude/skills/mx-data && python mx_data.py "[公司名]" 近五年 每股收益 净资产收益率 毛利率
+
+# 财务报表（tushare）
+python -c "
+import tushare as ts
+pro = ts.pro_api()
+df = pro.income(ts_code='[代码.SH/SZ]', fields='ts_code,end_date,revenue,npmargin')
+print(df.head(10))
+"
+```
+
+**验证清单：**
+- 确认净债务 vs 净现金（估值关键）
+- 确认稀释股本（检查近期回购/发行）
+- 验证历史利润率与业务模式一致
+- 交叉验证收入增长率与行业基准
+- 验证税率合理（中国企业通常25%，高新技术企业15%）
 
 ### Step 2: Historical Analysis (3-5 years)
 
@@ -197,53 +220,58 @@ EBIT
 - Growth CapEx: Supports expansion (additional 2-5% revenue)
 - Total CapEx should align with company's growth strategy
 
-### Step 6: Cost of Capital (WACC) Research
+### Step 6: 资本成本（WACC）计算
 
-**CAPM Methodology for Cost of Equity:**
-
-```
-Cost of Equity = Risk-Free Rate + Beta × Equity Risk Premium
-
-Where:
-- Risk-Free Rate = Current 10-Year Treasury Yield
-- Beta = 5-year monthly stock beta vs market index
-- Equity Risk Premium = 5.0-6.0% (market standard)
-```
-
-**Cost of Debt Calculation:**
+**CAPM 权益资本成本（中国市场适配）：**
 
 ```
-After-Tax Cost of Debt = Pre-Tax Cost of Debt × (1 - Tax Rate)
+权益资本成本 = 无风险利率 + Beta × 权益风险溢价
 
-Determine Pre-Tax Cost of Debt from:
-- Credit rating (if available)
-- Current yield on company bonds
-- Interest expense / Total Debt from financials
+其中：
+- 无风险利率 = 中国10年期国债收益率（约1.5-2.5%，2024-2026年）
+- Beta = 5年月度股票Beta，对沪深300指数回归
+- 权益风险溢价 = 5.5-7.5%（新兴市场标准，高于成熟市场的5-6%）
 ```
 
-**Capital Structure Weights:**
+**债务成本计算：**
 
 ```
-Market Value Equity = Current Stock Price × Shares Outstanding
-Net Debt = Total Debt - Cash & Equivalents
-Enterprise Value = Market Cap + Net Debt
+税后债务成本 = 税前债务成本 × (1 - 税率)
 
-Equity Weight = Market Cap / Enterprise Value
-Debt Weight = Net Debt / Enterprise Value
-
-WACC = (Cost of Equity × Equity Weight) + (After-Tax Cost of Debt × Debt Weight)
+税前债务成本来源：
+- 企业信用评级（如有）
+- 企业债当前收益率
+- 利息支出 / 总债务（财务报表）
 ```
 
-**Special Cases:**
-- **Net Cash Position**: If Cash > Debt, Net Debt is NEGATIVE
-  - Debt Weight may be negative
-  - WACC calculation adjusts accordingly
-- **No Debt**: WACC = Cost of Equity
+**资本结构权重：**
 
-**Typical WACC Ranges:**
-- Large Cap, Stable: 7-9%
-- Growth Companies: 9-12%
-- High Growth/Risk: 12-15%
+```
+权益市值 = 当前股价 × 股本
+净债务 = 总债务 - 现金及等价物
+企业价值 = 权益市值 + 净债务
+
+权益权重 = 权益市值 / 企业价值
+债务权重 = 净债务 / 企业价值
+
+WACC = (权益资本成本 × 权益权重) + (税后债务成本 × 债务权重)
+```
+
+**特殊情况：**
+- **净现金状态**：若现金 > 债务，净债务为负
+  - 债务权重可能为负
+  - WACC计算相应调整
+- **无债务**：WACC = 权益资本成本
+
+**A股典型WACC范围：**
+| 行业 | 典型WACC | 典型Beta |
+|------|---------|---------|
+| 大型国有银行 | 7-9% | 0.5-0.8 |
+| 股份制/城商行 | 9-11% | 0.7-1.0 |
+| 保险 | 9-12% | 0.8-1.2 |
+| 金融租赁 | 9-13% | 0.8-1.1 |
+| 券商 | 10-13% | 1.0-1.3 |
+| 科技成长股 | 12-15% | 1.2-1.5 |
 
 ### Step 7: Discount Rate Application (5-10 Year Forecast)
 
@@ -270,46 +298,46 @@ PV = $1,000 × 0.9535 = $954
 - **7-10 years**: High growth companies with longer runway
 - **3 years**: Mature, stable businesses
 
-### Step 8: Terminal Value Calculation
+### Step 8: 终值计算
 
-**Perpetuity Growth Method (Preferred):**
+**永续增长法（首选）：**
 
 ```
-Terminal FCF = Final Year FCF × (1 + Terminal Growth Rate)
-Terminal Value = Terminal FCF / (WACC - Terminal Growth Rate)
+终值FCF = 最终年FCF × (1 + 永续增长率)
+终值 = 终值FCF / (WACC - 永续增长率)
 
-Critical Constraint: Terminal Growth < WACC (otherwise infinite value)
+关键约束：永续增长率 < WACC（否则估值无限大）
 ```
 
-**Terminal Growth Rate Selection:**
-- Conservative: 2.0-2.5% (GDP growth rate)
-- Moderate: 2.5-3.5%
-- Aggressive: 3.5-5.0% (only for market leaders)
+**永续增长率选择（中国市场）：**
+- 保守：2.0-2.5%（长期通胀水平）
+- 中性：2.5-3.5%（与中国GDP增速对齐）
+- 乐观：3.5-4.5%（行业龙头适用）
 
-**Do not exceed**: Risk-free rate or long-term GDP growth
+**上限约束**：不超过中国名义GDP增长率（约5-7%）或无风险利率
 
-**Exit Multiple Method (Alternative):**
+**退出倍数法（替代）：**
 ```
-Terminal Value = Final Year EBITDA × Exit Multiple
+终值 = 最终年EBITDA × 退出倍数
 
-Where Exit Multiple comes from:
-- Industry comparable trading multiples
-- Precedent transaction multiples
-- Typical range: 8-15x EBITDA
-```
-
-**Present Value of Terminal Value:**
-```
-PV of Terminal Value = Terminal Value / (1 + WACC)^Final Period
-
-Where Final Period accounts for timing:
-5-year model with mid-year convention: Period = 4.5
+退出倍数来源：
+- 行业可比交易倍数
+- 历史并购交易倍数
+- A股典型范围：8-15x EBITDA
 ```
 
-**Terminal Value Sanity Check:**
-- Should represent 50-70% of Enterprise Value
-- If >75%, model may be over-reliant on terminal assumptions
-- If <40%, check if terminal assumptions are too conservative
+**终值现值计算：**
+```
+终值现值 = 终值 / (1 + WACC)^最终期数
+
+期数考虑年中惯例：
+5年期模型：期数 = 4.5
+```
+
+**终值合理性检验：**
+- 应占企业价值50-70%
+- 若>75%，模型可能过度依赖终值假设
+- 若<40%，检查终值假设是否过于保守
 
 ### Step 9: Enterprise to Equity Value Bridge
 
@@ -1192,25 +1220,32 @@ This approach centralizes scenario logic, making the model easier to audit and m
 
 ## Workflow Integration
 
-### At Start of DCF Build
+### DCF模型构建开始
 
-1. **Gather market data**:
-   - Check for available MCP servers for current market data
-   - Use web search/fetch for stock prices, beta, and other market metrics
-   - Request from user if specific data is needed
+1. **获取市场数据**：
+   ```bash
+   cd ~/.claude/skills/mx-data && python mx_data.py "[公司名]" 最新价 总股本 beta 股息率
+   ```
 
-2. **Gather historical financials**:
-   - Check for available MCP servers (Daloopa, etc.)
-   - Request from user if not available via MCP
-   - Manual extraction from 10-Ks if necessary
+2. **获取历史财务数据**：
+   ```bash
+   cd ~/.claude/skills/mx-data && python mx_data.py "[公司名]" 近五年 每股收益 净资产收益率
+   
+   python -c "
+   import tushare as ts
+   pro = ts.pro_api()
+   df = pro.income(ts_code='[代码.SH/SZ]')
+   print(df.head(10))
+   "
+   ```
 
-3. **Begin model construction** using the DCF methodology detailed in this skill
+3. **开始模型构建**：使用本skill详述的DCF方法论
 
-### During Model Construction
+### 模型构建过程中
 
-1. **Build Excel model** using openpyxl with formulas (not hardcoded values)
-2. **Follow xlsx skill conventions** for formula construction and formatting
-3. **Apply fill colors only if requested** by user or if specific brand guidelines are provided
+1. **构建Excel模型**：使用openpyxl写入公式（非硬编码数值）
+2. **遵循xlsx skill规范**：公式构建和格式化约定
+3. **仅在用户要求时应用填充颜色**或特定品牌指南
 
 ### Before Delivering Model (MANDATORY)
 
@@ -1239,10 +1274,10 @@ This approach centralizes scenario logic, making the model easier to audit and m
 
 ### Available Data Sources
 
-- **MCP servers**: If configured (Daloopa for historical financials)
-- **Web search/fetch**: For current stock prices, beta, and market data
-- **User-provided data**: Historical financials, consensus estimates
-- **Manual extraction**: SEC EDGAR filings as fallback
+- **mx-data**：东方财富妙想API — 行情数据、财务指标（一级数据源）
+- **tushare**：Tushare Pro API — 财务报表、分红数据、国债收益率（补充）
+- **mx-search**：东方财富妙想搜索 — 公告、研报、行业观点（研究数据源）
+- **User-provided data**：用户提供的财务数据、盈利预测
 
 ## Final Output Checklist
 

@@ -1,41 +1,51 @@
 ---
 name: comps-analysis
 description: |
-  Build institutional-grade comparable company analyses with operating metrics, valuation multiples, and statistical benchmarking in Excel/spreadsheet format.
+  构建机构级可比公司分析，包含经营指标、估值倍数和统计基准，输出Excel格式。
 
-  **Perfect for:**
-  - Public company valuation (M&A, investment analysis)
-  - Benchmarking performance vs. industry peers
-  - Pricing IPOs or funding rounds
-  - Identifying valuation outliers (over/under-valued)
-  - Supporting investment committee presentations
-  - Creating sector overview reports
+  **适用场景：**
+  - A股上市公司估值（并购、投资分析）
+  - 与行业同行对比经营表现
+  - IPO定价或融资轮估值
+  - 识别估值异常（高估/低估）
+  - 投委会演示材料
+  - 行业概览报告
 
-  **Not ideal for:**
-  - Private companies without comparable public peers
-  - Highly diversified conglomerates
-  - Distressed/bankrupt companies
-  - Pre-revenue startups
-  - Companies with unique business models
+  **不适用场景：**
+  - 无可比上市公司的私营企业
+  - 高度多元化的综合企业
+  - 困境/破产公司
+  - 未盈利初创公司
+  - 业务模式独特的企业
 ---
 
-# Comparable Company Analysis
+# 可比公司分析
 
-## ⚠️ CRITICAL: Data Source Priority (READ FIRST)
+## ⚠️ 关键：数据源优先级（首先阅读）
 
-**ALWAYS follow this data source hierarchy:**
+**A股估值必须遵循以下数据源层次（详见 `references/data-source-config.md`）：**
 
-1. **FIRST: Check for MCP data sources** - If S&P Kensho MCP, FactSet MCP, or Daloopa MCP are available, use them exclusively for financial and trading information
-2. **DO NOT use web search** if the above MCP data sources are available
-3. **ONLY if MCPs are unavailable:** Then use Bloomberg Terminal, SEC EDGAR filings, or other institutional sources
-4. **NEVER use web search as a primary data source** - it lacks the accuracy, audit trails, and reliability required for institutional-grade analysis
+1. **mx-data（一级数据源）** — 东方财富妙想API
+   - 行情数据：股价、Beta、股息率、市值
+   - 财务指标：EPS、ROE、净利润率、毛利率
+   - 使用：`cd ~/.claude/skills/mx-data && python mx_data.py "[公司名]" [指标]`
 
-**Why this matters:** MCP sources provide verified, institutional-grade data with proper citations. Web search results can be outdated, inaccurate, or unreliable for financial analysis.
+2. **tushare（补充数据源）** — Tushare Pro API
+   - 财务报表详细数据
+   - 分红送股明细
+   - 行业分类数据
+
+3. **mx-search（研究数据源）** — 东方财富妙想搜索
+   - 行业研报、券商观点
+   - 公司公告、管理层指引
+
+**不使用国际第三方MCP**（Daloopa/FactSet/S&P Global等），这些面向美股/国际市场，不适用A股分析。
 
 ---
 
 ## Overview
-This skill teaches Claude to build institutional-grade comparable company analyses that combine operating metrics, valuation multiples, and statistical benchmarking. The output is a structured Excel/spreadsheet that enables informed investment decisions through peer comparison.
+
+本 skill 教授构建机构级可比公司分析，结合经营指标、估值倍数和统计基准。输出结构化Excel表格，支持投资决策中的同行对比。
 
 **Reference Material & Contextualization:**
 
