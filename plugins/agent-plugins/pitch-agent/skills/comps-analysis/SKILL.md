@@ -39,6 +39,11 @@ description: |
    - 行业研报、券商观点
    - 公司公告、管理层指引
 
+4. **zhipu-websearch（后备搜索）** — 智谱 Web Search
+   - 当 mx-search 失败时作为后备
+   - 需要非金融领域信息时使用
+   - 使用：`from zai import ZhipuAiClient`
+
 **不使用国际第三方MCP**（Daloopa/FactSet/S&P Global等），这些面向美股/国际市场，不适用A股分析。
 
 ---

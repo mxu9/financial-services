@@ -77,6 +77,18 @@ description: DDM (Dividend Discount Model) 股息折现模型，专为高股息�
 1. **mx-data**（一级）— 当前股价、Beta、EPS、ROE、总股本
 2. **tushare**（补充）— 历史分红送股明细、国债收益率曲线、财务指标
 3. **mx-search**（研究）— 分红政策公告、管理层指引、行业研报
+4. **zhipu-websearch**（后备）— 当 mx-search 失败时作为后备搜索
+
+**后备搜索示例（当 mx-search 失败时）：**
+```python
+from zai import ZhipuAiClient
+client = ZhipuAiClient()
+response = client.web_search.web_search(
+    search_engine='search_std',
+    search_query='[公司名] 分红政策',
+    search_recency_filter='oneMonth'
+)
+```
 
 **数据获取脚本模板：**
 

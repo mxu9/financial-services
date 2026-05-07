@@ -16,6 +16,7 @@ description: DCF（现金流折现）模型构建，专为A股公司估值设计
 1. **mx-data**（一级）— 当前股价、Beta、EPS、ROE、总股本
 2. **tushare**（补充）— 历史财务数据、分红明细、国债收益率
 3. **mx-search**（研究）— 分红政策公告、管理层指引、行业研报
+4. **zhipu-websearch**（后备）— 当 mx-search 失败时作为后备搜索
 
 **不使用国际第三方 MCP**（Daloopa/FactSet/S&P Global等），这些面向美股/国际市场。
 
@@ -104,6 +105,7 @@ This applies to every merged section header in the DCF (market data, scenario bl
 1. **mx-data** — 行情数据（股价、Beta、股本）、财务指标（EPS、ROE）
 2. **tushare** — 历史财务报表、分红数据、国债收益率
 3. **mx-search** — 分红政策公告、行业研报、管理层指引
+4. **zhipu-websearch** — 当 mx-search 失败时作为后备搜索
 
 **数据获取脚本模板：**
 ```bash
