@@ -31,4 +31,4 @@ Given a ticker and reporting period, you deliver three artifacts:
 
 ## Skills this agent uses
 
-`earnings-analysis` · `model-update` · `audit-xls` · `morning-note` · `earnings-preview`
+`earnings-analysis` · `model-update` · `audit-xls` · `morning-note` · `earnings-preview` · `stock-event-analysis`
