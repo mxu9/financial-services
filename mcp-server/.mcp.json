@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "financial-services": {
+      "command": "python",
+      "args": ["mcp-server/server.py"],
+      "env": {
+        "MX_APIKEY": "${MX_APIKEY}",
+        "TUSHARE_TOKEN": "${TUSHARE_TOKEN}",
+        "ANTHROPIC_API_KEY": "${ANTHROPIC_AUTH_TOKEN}",
+        "ANTHROPIC_BASE_URL": "${ANTHROPIC_BASE_URL}",
+        "ANTHROPIC_MODEL": "${ANTHROPIC_MODEL}"
+      }
+    }
+  }
+}
