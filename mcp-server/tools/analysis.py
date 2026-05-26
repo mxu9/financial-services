@@ -111,7 +111,7 @@ async def analyze_event(
         if event_description:
             search_query += f" {event_description}"
         else:
-            search_query += " 最新公告 新闻 2026年"
+            search_query += f" 最新公告 新闻 {datetime.now().year}年"
         events = _ds.search(search_query)
         financials = _ds.get_financials(company_name, years=3)
 
@@ -239,7 +239,10 @@ async def sector_overview(sector_name: str) -> str:
     """
     try:
         market = _ds.get_market(f"{sector_name}板块")
-        events = _ds.search(f"{sector_name} 行业 政策 趋势 2026年5月")
+        now = datetime.now()
+        events = _ds.search(
+            f"{sector_name} 行业 政策 趋势 {now.year}年{now.month}月"
+        )
 
         market_text = json.dumps(market, ensure_ascii=False, indent=2)
         events_text = json.dumps(events.get("items", [])[:10], ensure_ascii=False, indent=2)

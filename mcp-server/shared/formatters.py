@@ -8,7 +8,7 @@ def now_str() -> str:
 
 
 def date_to_short(date_str: str) -> str:
-    """2026-05-25 → 260525"""
+    """2026-05-25 → 260525 (示例)"""
     try:
         d = datetime.strptime(date_str[:10], "%Y-%m-%d")
         return d.strftime("%y%m%d")
