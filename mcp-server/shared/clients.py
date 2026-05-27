@@ -3,6 +3,14 @@
 import os
 import sys
 
+from dotenv import load_dotenv
+
+# 加载 mcp-server/.env（手动启动 python server.py --sse 时 .mcp.json 不生效）
+_dotenv_path = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", ".env"
+)
+load_dotenv(_dotenv_path, override=True)
+
 SKILLS_DIR = os.path.expanduser(r"~\.claude\skills")
 sys.path.insert(0, os.path.join(SKILLS_DIR, "mx-data"))
 sys.path.insert(0, os.path.join(SKILLS_DIR, "mx-search"))
@@ -50,13 +58,16 @@ class DataSourceManager:
     def anthropic(self):
         if self._anthropic is None:
             from anthropic import Anthropic
-            # 兼容两种常见的 API Key 环境变量名
-            api_key = os.getenv("ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_AUTH_TOKEN") or ""
-            base_url = os.getenv("ANTHROPIC_BASE_URL", None)
+            api_key = os.getenv("ANTHROPIC_API_KEY", "")
+            if not api_key:
+                raise ValueError(
+                    "ANTHROPIC_API_KEY 未设置。请在 mcp-server/.env 或环境变量中配置。"
+                )
+            base_url = os.getenv("ANTHROPIC_BASE_URL", "")
             kwargs = {"api_key": api_key}
             if base_url:
                 kwargs["base_url"] = base_url
-            self._anthropic = Anthropic(**kwargs) if api_key else None
+            self._anthropic = Anthropic(**kwargs)
         return self._anthropic
 
     # ---- 数据查询 ----
@@ -149,14 +160,21 @@ class DataSourceManager:
         if not self.anthropic:
             return "[错误] ANTHROPIC_API_KEY 未设置，无法生成分析报告"
 
-        model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
+        model = os.getenv("ANTHROPIC_MODEL", None)
+        if not model:
+            return "[错误] ANTHROPIC_MODEL 未设置，无法生成分析报告"
         response = self.anthropic.messages.create(
             model=model,
             max_tokens=4096,
             system=system_prompt,
             messages=[{"role": "user", "content": user_prompt}],
         )
-        return response.content[0].text
+        # 遍历 content 块，提取 TextBlock 文本（跳过 ThinkingBlock 等非文本块）
+        texts = []
+        for block in response.content:
+            if hasattr(block, "text"):
+                texts.append(block.text)
+        return "\n".join(texts)
 
     # ---- 股票代码工具 ----
 
