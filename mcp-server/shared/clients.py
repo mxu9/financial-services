@@ -1,7 +1,6 @@
 """统一数据源客户端封装：mx-data, mx-search, tushare, Anthropic."""
 
 import os
-import sys
 
 from dotenv import load_dotenv
 
@@ -11,12 +10,8 @@ _dotenv_path = os.path.join(
 )
 load_dotenv(_dotenv_path, override=True)
 
-SKILLS_DIR = os.path.expanduser(r"~\.claude\skills")
-sys.path.insert(0, os.path.join(SKILLS_DIR, "mx-data"))
-sys.path.insert(0, os.path.join(SKILLS_DIR, "mx-search"))
-
-from mx_data import MXData
-from mx_search import MXSearch
+from shared.mx_data import MXData
+from shared.mx_search import MXSearch
 
 
 def _stock_code_to_ts_code(code: str) -> str:
