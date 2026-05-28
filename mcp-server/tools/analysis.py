@@ -14,6 +14,28 @@ _SKILL_DIR = os.path.join(
 )
 
 
+def _strip_skill_instructions(content: str) -> str:
+    """去除 SKILL.md 中不适合作 LLM system prompt 的章节。
+
+    MCP Tool 内部已完成数据收集，LLM 只需生成报告，
+    不需要 shell 命令、工作流步骤、数据源配置等执行指令。
+    """
+    import re
+
+    # 删除代码块中的 shell 命令
+    content = re.sub(r"```bash.*?```", "", content, flags=re.DOTALL)
+    # 删除文本中引用的 shell 命令行
+    content = re.sub(
+        r"cd ~/\.claude/skills/mx-\w+.*?(?=\n\n|\n$|$)", "", content
+    )
+    # 删除步数图 (ASCII art 工作流)
+    content = re.sub(r"\[步骤 \d:.*?\] ── .*?\n(?:\s*│.*?\n)*", "", content)
+    # 删除 "使用方式：" 行
+    content = re.sub(r"^\s*- \*\*使用方式：.*?$", "", content, flags=re.MULTILINE)
+
+    return content
+
+
 def _load_skill(skill_name: str) -> str:
     """读取 SKILL.md 并去除 YAML frontmatter，作为 LLM system prompt。
 
@@ -32,19 +54,19 @@ def _load_skill(skill_name: str) -> str:
         parts = content.split("---", 2)
         content = parts[2] if len(parts) > 2 else content
 
-    return content.strip()
+    return _strip_skill_instructions(content).strip()
 
 
-def _save_report(company: str, content: str) -> str:
-    """保存报告到 reports/ 目录."""
-    reports_dir = os.path.join(os.getcwd(), "reports")
-    os.makedirs(reports_dir, exist_ok=True)
-    short_date = datetime.now().strftime("%y%m%d")
-    filename = f"{company}_事件分析报告_{short_date}.md"
-    filepath = os.path.join(reports_dir, filename)
-    with open(filepath, "w", encoding="utf-8") as f:
-        f.write(content)
-    return filepath
+# def _save_report(company: str, content: str) -> str:
+#     """保存报告到 reports/ 目录."""
+#     reports_dir = os.path.join(os.getcwd(), "reports")
+#     os.makedirs(reports_dir, exist_ok=True)
+#     short_date = datetime.now().strftime("%y%m%d")
+#     filename = f"{company}_事件分析报告_{short_date}.md"
+#     filepath = os.path.join(reports_dir, filename)
+#     with open(filepath, "w", encoding="utf-8") as f:
+#         f.write(content)
+#     return filepath
 
 
 async def analyze_event(
@@ -94,9 +116,8 @@ async def analyze_event(
 
 请严格按照分析框架输出完整的Markdown报告。"""
 
-        report = _ds.generate_report(_load_skill("stock-event-analysis"), user_prompt)
-        _save_report(company_name, report)
-        return report
+        return _ds.generate_report(_load_skill("stock-event-analysis"), user_prompt)
+        # _save_report(company_name, report)
     except Exception as e:
         return f"分析失败: {e}"
 
