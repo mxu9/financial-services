@@ -143,6 +143,45 @@ netsh advfirewall firewall add rule name="MCP Server" dir=in action=allow protoc
 
 *仅在调用分析报告类 Tool（analyze_event 等）时需要。数据查询类 Tool 不需要。
 
-### 数据源复用
+## 内网穿透
 
-MCP Server 通过 `sys.path` 导入 `~/.claude/skills/` 下的现有 Python 脚本（`mx_data.py`、`mx_search.py`），不复制代码，数据获取逻辑与 Claude Code Skill 共享同一来源。
+将本地 Dify / MCP Server 暴露到公网，供外部访问。
+
+### ngrok
+
+在本地服务和公网之间建立加密隧道，外网通过 `https://xxx.ngrok-free.app` 访问 `localhost:80`。
+
+```bash
+# 1. 注册获取 token
+#    https://dashboard.ngrok.com/signup → 复制 Authtoken
+
+# 2. 安装配置
+winget install ngrok
+ngrok config add-authtoken <你的token>
+
+# 3. 启动
+ngrok http 80 --url=<固定域名>.ngrok-free.app
+```
+
+启动后访问 `https://<固定域名>.ngrok-free.app/chatbot/xxx` 即可。
+
+⚠️ 免费版有浏览器警告页，无法在 iframe 中去掉。1 GB/月带宽。
+
+### cloudflared Quick Tunnel（推荐）
+
+```bash
+winget install --id Cloudflare.cloudflared
+cloudflared tunnel --url http://localhost:80
+```
+
+✅ 无需注册、无警告页、无限带宽、一条命令即可。
+
+### 对比
+
+| | ngrok | cloudflared |
+|------|------|------|
+| 注册 | 需要 | 不需要 |
+| 警告页 | ❌ 有 | ✅ 无 |
+| 带宽 | 1 GB/月 | 无限 |
+| 固定域名 | 免费 1 个 | 需完整 DNS 配置 |
+| 适合 | 临时测试 | 长期使用 |
