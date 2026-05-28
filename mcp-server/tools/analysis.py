@@ -3,10 +3,12 @@
 import json
 import os
 from datetime import datetime
+from urllib.parse import quote
 from shared.clients import DataSourceManager
 from shared.formatters import now_str, date_to_short
 
 _ds = DataSourceManager()
+_REPORT_BASE = os.getenv("REPORT_BASE_URL", "http://127.0.0.1:8000")
 
 _SKILL_DIR = os.path.join(
     os.path.dirname(__file__),
@@ -22,16 +24,23 @@ def _strip_skill_instructions(content: str) -> str:
     """
     import re
 
-    # 删除代码块中的 shell 命令
-    content = re.sub(r"```bash.*?```", "", content, flags=re.DOTALL)
-    # 删除文本中引用的 shell 命令行
+    # 删除 "数据源配置" 整个章节
+    content = re.sub(r"## 数据源配置.*?(?=## |$)", "", content, flags=re.DOTALL)
+    # 删除 "自动化分析工作流" 整个章节
     content = re.sub(
-        r"cd ~/\.claude/skills/mx-\w+.*?(?=\n\n|\n$|$)", "", content
+        r"## 自动化分析工作流.*?(?=## 输出模板格式约束|## 示例|$)",
+        "", content, flags=re.DOTALL,
     )
-    # 删除步数图 (ASCII art 工作流)
-    content = re.sub(r"\[步骤 \d:.*?\] ── .*?\n(?:\s*│.*?\n)*", "", content)
-    # 删除 "使用方式：" 行
-    content = re.sub(r"^\s*- \*\*使用方式：.*?$", "", content, flags=re.MULTILINE)
+    # 删除残余的 inline shell 命令（反引号包裹的 cd ~/...）
+    content = re.sub(r"`cd ~/.*?`", "", content)
+    # 删除残余的代码块（无语言标注的 shell 命令）
+    content = re.sub(r"```\ncd ~/.*?```", "", content, flags=re.DOTALL)
+    # 删除 "使用方式：" 引导的行
+    content = re.sub(r".*使用方式：.*", "", content)
+    # 删除残留的 "数据源配置" 行
+    content = re.sub(r".*mx-search（一级.*|.*mx-data（一级.*|.*zhipu-websearch.*", "", content)
+    # 删除多余空行
+    content = re.sub(r"\n{3,}", "\n\n", content)
 
     return content
 
@@ -57,16 +66,16 @@ def _load_skill(skill_name: str) -> str:
     return _strip_skill_instructions(content).strip()
 
 
-# def _save_report(company: str, content: str) -> str:
-#     """保存报告到 reports/ 目录."""
-#     reports_dir = os.path.join(os.getcwd(), "reports")
-#     os.makedirs(reports_dir, exist_ok=True)
-#     short_date = datetime.now().strftime("%y%m%d")
-#     filename = f"{company}_事件分析报告_{short_date}.md"
-#     filepath = os.path.join(reports_dir, filename)
-#     with open(filepath, "w", encoding="utf-8") as f:
-#         f.write(content)
-#     return filepath
+def _save_report(company: str, content: str) -> str:
+    """保存报告到 reports/ 目录，返回文件名."""
+    reports_dir = os.path.join(os.getcwd(), "reports")
+    os.makedirs(reports_dir, exist_ok=True)
+    short_ts = datetime.now().strftime("%y%m%d_%H%M%S")
+    filename = f"{company}_事件分析报告_{short_ts}.md"
+    filepath = os.path.join(reports_dir, filename)
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(content)
+    return filename
 
 
 async def analyze_event(
@@ -116,8 +125,9 @@ async def analyze_event(
 
 请严格按照分析框架输出完整的Markdown报告。"""
 
-        return _ds.generate_report(_load_skill("stock-event-analysis"), user_prompt)
-        # _save_report(company_name, report)
+        report = _ds.generate_report(_load_skill("stock-event-analysis"), user_prompt)
+        filename = _save_report(company_name, report)
+        return f"{report}\n\n---\n📥 报告下载: {_REPORT_BASE}/reports/{quote(filename, safe='._')}"
     except Exception as e:
         return f"分析失败: {e}"
 
@@ -162,7 +172,9 @@ async def analyze_earnings(
 
 请输出完整的财报分析报告。"""
 
-        return _ds.generate_report(_load_skill("earnings-analysis"), user_prompt)
+        report = _ds.generate_report(_load_skill("earnings-analysis"), user_prompt)
+        filename = _save_report(f"{company_name}_财报", report)
+        return f"{report}\n\n---\n📥 报告下载: {_REPORT_BASE}/reports/{quote(filename, safe='._')}"
     except Exception as e:
         return f"分析失败: {e}"
 
@@ -199,7 +211,9 @@ async def preview_earnings(company_name: str, stock_code: str) -> str:
 
 请输出完整的情景分析报告，包含三种情景的EPS预估和概率权重。"""
 
-        return _ds.generate_report(_load_skill("earnings-preview"), user_prompt)
+        report = _ds.generate_report(_load_skill("earnings-preview"), user_prompt)
+        filename = _save_report(f"{company_name}_业绩前瞻", report)
+        return f"{report}\n\n---\n📥 报告下载: {_REPORT_BASE}/reports/{quote(filename, safe='._')}"
     except Exception as e:
         return f"分析失败: {e}"
 
@@ -235,7 +249,9 @@ async def sector_overview(sector_name: str) -> str:
 
 请输出完整的行业概览报告。"""
 
-        return _ds.generate_report(_load_skill("sector-overview"), user_prompt)
+        report = _ds.generate_report(_load_skill("sector-overview"), user_prompt)
+        filename = _save_report(f"{sector_name}行业概览", report)
+        return f"{report}\n\n---\n📥 报告下载: {_REPORT_BASE}/reports/{quote(filename, safe='._')}"
     except Exception as e:
         return f"分析失败: {e}"
 
@@ -265,6 +281,8 @@ async def catalyst_calendar(
 请按日期整理为催化剂日历，标注每项事件的影响级别（高/中/低）和影响标的。
 输出Markdown格式的表格日历。"""
 
-        return _ds.generate_report(_load_skill("catalyst-calendar"), user_prompt)
+        report = _ds.generate_report(_load_skill("catalyst-calendar"), user_prompt)
+        filename = _save_report("催化剂日历", report)
+        return f"{report}\n\n---\n📥 报告下载: {_REPORT_BASE}/reports/{quote(filename, safe='._')}"
     except Exception as e:
         return f"分析失败: {e}"

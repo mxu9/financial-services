@@ -18,6 +18,10 @@ import os
 
 sys.path.insert(0, os.path.dirname(__file__))
 
+_REPORTS_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "reports"
+)
+
 # host 参数决定了 DNS rebinding 保护策略：
 # - 127.0.0.1 (默认) → 启用保护，仅允许本机连接
 # - 0.0.0.0 → 禁用保护，允许任何主机连接
@@ -87,9 +91,26 @@ def main():
         import uvicorn
         from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+        from urllib.parse import unquote
+        from starlette.responses import FileResponse, JSONResponse
+        from starlette.routing import Route
+
+        async def download_report(request):
+            filename = unquote(request.path_params["filename"])
+            if ".." in filename or "/" in filename or "\\" in filename:
+                return JSONResponse({"error": "Invalid filename"}, status_code=400)
+            filepath = os.path.join(_REPORTS_DIR, filename)
+            if not os.path.isfile(filepath):
+                return JSONResponse({"error": "Not found"}, status_code=404)
+            return FileResponse(
+                filepath, media_type="text/markdown; charset=utf-8"
+            )
+
         app = mcp.sse_app()
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
-        print(f"SSE endpoint: http://{host}:{port}/sse", file=sys.stderr)
+        app.routes.insert(0, Route("/reports/{filename}", download_report, methods=["GET"]))
+        print(f"SSE endpoint:    http://{host}:{port}/sse", file=sys.stderr)
+        print(f"Reports download: http://{host}:{port}/reports/{{filename}}", file=sys.stderr)
         uvicorn.run(app, host=host, port=port)
     else:
         mcp.run(transport="stdio")
