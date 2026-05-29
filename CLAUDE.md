@@ -176,12 +176,68 @@ cloudflared tunnel --url http://localhost:80
 
 ✅ 无需注册、无警告页、无限带宽、一条命令即可。
 
+### Cloudflare Dashboard 公网路由
+
+通过 Cloudflare 公共主机名，将本地多个服务映射到不同子域名。
+
+**前提**：
+- 已申请公共域名（如 `snaxum.com`），并托管在 Cloudflare
+- 已有 cloudflared tunnel 连接到 Cloudflare
+
+**步骤**：
+
+1. 打开 Cloudflare Dashboard → **Zero Trust** → **Networks** → **Tunnels**
+2. 找到你的隧道 → 点击 **Configure** → **Public Hostname** 标签
+3. 添加公共主机名，例如：
+
+| Subdomain | Domain | Type | URL |
+|-----------|--------|------|-----|
+| `www` | `snaxum.com` | HTTP | `localhost:80` |
+| `reports` | `snaxum.com` | HTTP | `localhost:8001` |
+
+保存后，`www.snaxum.com` 指向本地的 Dify(80)，`reports.snaxum.com` 指向本地报告下载服务(8001)。
+
 ### 对比
 
-| | ngrok | cloudflared |
-|------|------|------|
-| 注册 | 需要 | 不需要 |
-| 警告页 | ❌ 有 | ✅ 无 |
-| 带宽 | 1 GB/月 | 无限 |
-| 固定域名 | 免费 1 个 | 需完整 DNS 配置 |
-| 适合 | 临时测试 | 长期使用 |
+| | ngrok | cloudflared Quick | cloudflared Dashboard |
+|------|------|------|------|
+| 注册 | 需要 | 不需要 | 不需要 |
+| 域名 | 自带子域名 | 临时随机域名 | 自有域名（需配置 DNS） |
+| 警告页 | ❌ 免费版有 | ✅ 无 | ✅ 无 |
+| 带宽 | 1 GB/月 | 无限 | 无限 |
+| 固定域名 | 免费 1 个 | ❌ 不支持 | ✅ 支持多子域名 |
+| 多服务 | ❌ | ❌ | ✅ 单隧道映射多端口 |
+| 适合 | 临时测试 | 临时分享 | 长期部署 |
+
+
+## 报告下载服务
+
+分析报告通过独立的 HTTP 服务器对外提供下载，与 MCP Server 分离部署。
+
+### 启动
+
+```bash
+python serve_reports.py
+```
+
+默认监听 8001 端口，将 `reports/` 目录以静态文件形式提供服务。
+
+`.md` 文件会以 UTF-8 编码返回，保证中文正常显示。
+
+### 配置
+
+在 `mcp-server/.env` 中设置报告下载的基础 URL：
+
+```
+REPORT_BASE_URL=https://reports.snaxum.com
+```
+
+MCP Server 的分析 Tool 会在报告末尾生成完整下载链接：
+
+```
+📥 报告下载: https://reports.snaxum.com/reports/xxx.md
+```
+
+### 与 Cloudflare 配合
+
+在 Cloudflare Dashboard 添加公共主机名 `reports.snaxum.com → localhost:8001`，即可公网下载。
