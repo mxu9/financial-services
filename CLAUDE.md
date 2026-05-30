@@ -167,28 +167,22 @@ ngrok http 80 --url=<固定域名>.ngrok-free.app
 
 ⚠️ 免费版有浏览器警告页，无法在 iframe 中去掉。1 GB/月带宽。
 
-### cloudflared Quick Tunnel（推荐）
-
-```bash
-winget install --id Cloudflare.cloudflared
-cloudflared tunnel --url http://localhost:80
-```
-
-✅ 无需注册、无警告页、无限带宽、一条命令即可。
-
-### Cloudflare Dashboard 公网路由
+### Cloudflare Dashboard 公网路由（推荐）
 
 通过 Cloudflare 公共主机名，将本地多个服务映射到不同子域名。
 
-**前提**：
-- 已申请公共域名（如 `snaxum.com`），并托管在 Cloudflare
-- 已有 cloudflared tunnel 连接到 Cloudflare
-
-**步骤**：
+**完整流程**：
 
 1. 打开 Cloudflare Dashboard → **Zero Trust** → **Networks** → **Tunnels**
-2. 找到你的隧道 → 点击 **Configure** → **Public Hostname** 标签
-3. 添加公共主机名，例如：
+2. 点击 **"创建隧道"** 按钮，按向导完成创建
+3. 进入该隧道，在概览页面根据提示的"安装 cloudflared 连接器"步骤，下载并安装 cloudflared
+4. 安装完成后，Windows 服务中会自动注册 **"cloudflared agent"** 服务，该服务与 Cloudflare 网络建立连接以实现高可用性
+5. 如需停止 tunnel，关闭该 Windows 服务即可
+
+**前提**：
+- 已申请公共域名（如 `snaxum.com`），并托管在 Cloudflare
+
+添加公共主机名，例如：
 
 | Subdomain | Domain | Type | URL |
 |-----------|--------|------|-----|
@@ -197,17 +191,26 @@ cloudflared tunnel --url http://localhost:80
 
 保存后，`www.snaxum.com` 指向本地的 Dify(80)，`reports.snaxum.com` 指向本地报告下载服务(8001)。
 
+### cloudflared Quick Tunnel
+
+```bash
+winget install --id Cloudflare.cloudflared
+cloudflared tunnel --url http://localhost:80
+```
+
+✅ 无需注册、无警告页、无限带宽、一条命令即可。
+
 ### 对比
 
-| | ngrok | cloudflared Quick | cloudflared Dashboard |
+| | ngrok | cloudflared Dashboard | cloudflared Quick |
 |------|------|------|------|
-| 注册 | 需要 | 不需要 | 不需要 |
-| 域名 | 自带子域名 | 临时随机域名 | 自有域名（需配置 DNS） |
+| 注册 | 需要 | 需要（首次安装） | 不需要 |
+| 域名 | 自带子域名 | 自有域名（需配置 DNS） | 临时随机域名 |
 | 警告页 | ❌ 免费版有 | ✅ 无 | ✅ 无 |
 | 带宽 | 1 GB/月 | 无限 | 无限 |
-| 固定域名 | 免费 1 个 | ❌ 不支持 | ✅ 支持多子域名 |
-| 多服务 | ❌ | ❌ | ✅ 单隧道映射多端口 |
-| 适合 | 临时测试 | 临时分享 | 长期部署 |
+| 固定域名 | 免费 1 个 | ✅ 支持多子域名 | ❌ 不支持 |
+| 多服务 | ❌ | ✅ 单隧道映射多端口 | ❌ |
+| 适合 | 临时测试 | 长期部署 | 临时分享 |
 
 
 ## 报告下载服务
