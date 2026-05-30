@@ -160,7 +160,7 @@ class DataSourceManager:
             return "[错误] ANTHROPIC_MODEL 未设置，无法生成分析报告"
         response = self.anthropic.messages.create(
             model=model,
-            max_tokens=4096,
+            max_tokens=16384,
             system=system_prompt,
             messages=[{"role": "user", "content": user_prompt}],
         )

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """financial-services MCP Server — 金融数据查询与分析服务.
 
-提供 14 个 MCP Tool，覆盖：
+提供 15 个 MCP Tool，覆盖：
 - 数据查询 (4): 行情、财务、新闻搜索、选股
-- 分析报告 (5): 事件分析、财报分析、业绩前瞻、行业概览、催化剂日历
+- 分析报告 (6): 事件分析、财报分析、业绩前瞻、行业概览、催化剂日历、估值分析
 - 估值数据 (5): DCF、DDM、Comps、LBO、三表数据
 
 启动方式:
@@ -57,20 +57,20 @@ mcp.tool()(get_comps_data)
 mcp.tool()(get_lbo_data)
 mcp.tool()(get_3statement_data)
 
-# ---- 注册分析报告 Tool (5个) ----
-from tools.analysis import (
-    analyze_event,
-    analyze_earnings,
-    preview_earnings,
-    sector_overview,
-    catalyst_calendar,
-)
+# ---- 注册分析报告 Tool (6个) ----
+from tools.analyze_event import analyze_event
+from tools.analyze_earnings import analyze_earnings
+from tools.preview_earnings import preview_earnings
+from tools.sector_overview import sector_overview
+from tools.catalyst_calendar import catalyst_calendar
+from tools.analyze_assessment import analyze_assessment
 
 mcp.tool()(analyze_event)
 mcp.tool()(analyze_earnings)
 mcp.tool()(preview_earnings)
 mcp.tool()(sector_overview)
 mcp.tool()(catalyst_calendar)
+mcp.tool()(analyze_assessment)
 
 
 def main():
