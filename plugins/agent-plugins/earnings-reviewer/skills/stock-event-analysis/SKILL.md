@@ -9,17 +9,8 @@ description: 上市公司关键事件与股价影响自动分析器。对A股上
 
 ## 数据源配置
 
-进行事件分析时，按以下优先级获取数据：
-
-1. **mx-search（一级：事件/公告搜索）** — 东方财富妙想搜索
-   - 搜索公司最新公告、行业政策、市场新闻
-   - 使用方式：`cd ~/.claude/skills/mx-search && python mx_search.py "[公司名/关键词] 公告/新闻"`
-2. **mx-data（一级：行情与财务）** — 东方财富妙想 API
-   - 获取当前股价、市值、PE、PB所处历史分位
-   - 使用方式：`cd ~/.claude/skills/mx-data && python mx_data.py "[公司名]" 最新价 总市值 pe pb`
-3. **zhipu-websearch（后备搜索）** — 智谱 Web Search
-   - mx-search 失败或API限额耗尽时使用
-   - 建议参数：`search_recency_filter='oneMonth'`
+遵循 `references/data-source-config.md` 中定义的数据源优先级和时间对齐规则。
+事件分析以 mx-search（公告/新闻搜索）和 mx-data（行情/财务）为主，zhipu-websearch 为后备。
 
 ## 事件分类解析架构
 
